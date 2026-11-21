@@ -14,18 +14,18 @@ namespace ECS
     {
     };
 
-    struct Transform : public Component
+    struct Transform : Component
     {
         Vector2 position{};
     };
 
-    struct Circle : public Component
+    struct Circle : Component
     {
         float radius{};
         Color color{};
     };
 
-    struct Movement : public Component
+    struct Movement : Component
     {
         Vector2 direction{};
     };

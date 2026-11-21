@@ -9,7 +9,7 @@ int main()
 
     auto& world{ECS::World::getInstance()};
 
-    auto bigRedCircle{world.createEntity()};
+    const auto bigRedCircle{world.createEntity()};
     world.addComponent<ECS::Transform>(bigRedCircle, Vector2(middle_screen));
     world.addComponent<ECS::Circle>(bigRedCircle, 100.0f, RED);
 
