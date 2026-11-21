@@ -33,6 +33,36 @@ namespace ECS
     template <typename T>
     concept ComponentConcept = std::derived_from<T, Component>;
 
+    template <ComponentConcept ComponentType>
+    class Storage
+    {
+    public:
+        template <typename... Args>
+        ComponentType& addComponent(Entity entity, Args&&... args)
+        {
+            auto [it, inserted]{m_storage.emplace(entity, ComponentType{{}, std::forward<Args>(args)...})};
+            return it->second;
+        }
+
+        std::optional<std::reference_wrapper<ComponentType>> getComponent(Entity entity)
+        {
+            auto it{m_storage.find(entity)};
+            if (it == m_storage.end())
+            {
+                return std::nullopt;
+            }
+            return it->second;
+        }
+
+        auto& getMap()
+        {
+            return m_storage;
+        }
+
+    private:
+        std::unordered_map<Entity, ComponentType> m_storage{};
+    };
+
     class World
     {
     public:
@@ -73,36 +103,6 @@ namespace ECS
         World(World&&) = delete;
 
         Entity m_nextEntity{1};
-
-        template <ComponentConcept ComponentType>
-        class Storage
-        {
-        public:
-            template <typename... Args>
-            ComponentType& addComponent(Entity entity, Args&&... args)
-            {
-                auto [it, inserted]{m_storage.emplace(entity, ComponentType{{}, std::forward<Args>(args)...})};
-                return it->second;
-            }
-
-            std::optional<std::reference_wrapper<ComponentType>> getComponent(Entity entity)
-            {
-                auto it{m_storage.find(entity)};
-                if (it == m_storage.end())
-                {
-                    return std::nullopt;
-                }
-                return it->second;
-            }
-
-            auto& getMap()
-            {
-                return m_storage;
-            }
-
-        private:
-            std::unordered_map<Entity, ComponentType> m_storage{};
-        };
 
         template <ComponentConcept ComponentType>
         Storage<ComponentType>& getStorage()
