@@ -34,33 +34,89 @@ namespace ECS
     concept ComponentConcept = std::derived_from<T, Component>;
 
     template <ComponentConcept ComponentType>
+    class SparseSet
+    {
+    public:
+        // map.emplace
+        ComponentType& insert(const Entity key, const ComponentType& component)
+        {
+            // resize vectors if needed
+            ensure_sparse_size(key);
+
+            // ComponentType for thet Entity does not exist yet
+            if (sparse[key] == INVALID)
+            {
+                sparse[key] = dense.size();
+                dense_keys.push_back(key);
+                dense.push_back(component);
+            }
+            // ComponentType for thet Entity exists, update it
+            else
+            {
+                dense[sparse[key]] = component;
+            }
+
+            return dense[sparse[key]];
+        }
+
+        ComponentType* get(const Entity key)
+        {
+            if (key >= sparse.size())
+            {
+                return nullptr;
+            }
+            auto index = sparse[key];
+            if (index == INVALID)
+            {
+                return nullptr;
+            }
+
+            return &dense[index];
+        }
+
+        const auto& getEntities() const
+        {
+            return dense_keys;
+        }
+
+    private:
+        std::vector<std::size_t> sparse{}; // indexes for the dense_keys/dense vectors
+        std::vector<std::size_t> dense_keys{}; // indexes for the sparse vector (entity id)
+        std::vector<ComponentType> dense; // component storage
+        static constexpr std::size_t INVALID{std::numeric_limits<std::size_t>::max()};
+
+        // resize vectors if needed
+        void ensure_sparse_size(const Entity key)
+        {
+            if (key >= sparse.size())
+            {
+                sparse.resize(key + 1, INVALID);
+            }
+        }
+    };
+
+    template <ComponentConcept ComponentType>
     class Storage
     {
     public:
         template <typename... Args>
         ComponentType& addComponent(Entity entity, Args&&... args)
         {
-            auto [it, inserted]{m_storage.emplace(entity, ComponentType{{}, std::forward<Args>(args)...})};
-            return it->second;
+            return m_storage.insert(entity, ComponentType{{}, std::forward<Args>(args)...});
         }
 
-        std::optional<std::reference_wrapper<ComponentType>> getComponent(Entity entity)
+        ComponentType* getComponent(Entity entity)
         {
-            auto it{m_storage.find(entity)};
-            if (it == m_storage.end())
-            {
-                return std::nullopt;
-            }
-            return it->second;
+            return m_storage.get(entity);
         }
 
-        auto& getMap()
+        const auto& getEntities() const
         {
-            return m_storage;
+            return m_storage.getEntities();
         }
 
     private:
-        std::unordered_map<Entity, ComponentType> m_storage{};
+        SparseSet<ComponentType> m_storage{};
     };
 
     class World
@@ -85,16 +141,17 @@ namespace ECS
         }
 
         template <ComponentConcept ComponentType>
-        std::optional<std::reference_wrapper<ComponentType>> getComponent(Entity entity)
+        ComponentType* getComponent(Entity entity)
         {
             auto& storage{getStorage<ComponentType>()};
             return storage.getComponent(entity);
         }
 
         template <ComponentConcept ComponentType>
-        auto& getComponentMap()
+        Storage<ComponentType>& getStorage()
         {
-            return getStorage<ComponentType>().getMap();
+            static Storage<ComponentType> storage{};
+            return storage;
         }
 
     private:
@@ -103,29 +160,19 @@ namespace ECS
         World(World&&) = delete;
 
         Entity m_nextEntity{1};
-
-        template <ComponentConcept ComponentType>
-        Storage<ComponentType>& getStorage()
-        {
-            static Storage<ComponentType> storage{};
-            return storage;
-        }
     };
 
     // Systems
 #pragma region Systems
     static void circle_renderer_system()
     {
-        for (auto& world{World::getInstance()}; const auto& [entity, circle_component] : world.getComponentMap<
-                 Circle>())
+        for (auto& world{World::getInstance()}; const auto& entity : world.getStorage<Circle>().getEntities())
         {
-            auto transform_component{world.getComponent<Transform>(entity)};
-            if (!transform_component.has_value())
-            {
-                continue;
-            }
-            auto [x, y] = transform_component->get().position;
-            DrawCircle(x, y, circle_component.radius, circle_component.color);
+            const auto* circle_component{world.getComponent<Circle>(entity)};
+            auto* transformComponent{world.getComponent<Transform>(entity)};
+
+            auto [x,y] = transformComponent->position;
+            DrawCircle(x, y, circle_component->radius, circle_component->color);
         }
     }
 #pragma endregion

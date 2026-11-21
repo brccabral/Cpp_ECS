@@ -6,16 +6,14 @@ static volatile float sum{};
 
 static void benchmark_system()
 {
-    for (auto& world{ECS::World::getInstance()}; const auto& [entity, circle] : world.getComponentMap<ECS::Circle>())
+    for (auto& world{ECS::World::getInstance()}; const auto& entity : world.getStorage<ECS::Circle>().getEntities())
     {
-        auto transformComponent{world.getComponent<ECS::Transform>(entity)};
-        if (!transformComponent.has_value())
-        {
-            continue;
-        }
-        auto [x,y] = transformComponent->get().position;
+        const auto* circle_component{world.getComponent<ECS::Circle>(entity)};
+        auto* transformComponent{world.getComponent<ECS::Transform>(entity)};
+
+        auto [x,y] = transformComponent->position;
         sum += x + y;
-        sum += circle.radius;
+        sum += circle_component->radius;
     }
 }
 
@@ -46,3 +44,4 @@ int main()
 }
 
 // std::unordered_map Elapsed time: 2905 ms
+// SparseSet Elapsed time: 343 ms
