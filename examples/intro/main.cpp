@@ -1,5 +1,4 @@
-﻿#include <raylib.h>
-#include <ECS/ecs.hpp>
+﻿#include <ECS/ecs.hpp>
 
 int main()
 {
