@@ -112,7 +112,7 @@ namespace ECS
 #pragma region Systems
     static void circle_renderer_system()
     {
-        for (auto& world{ECS::World::getInstance()}; const auto& [entity, circle_component] : world.getComponentMap<
+        for (auto& world{World::getInstance()}; const auto& [entity, circle_component] : world.getComponentMap<
                  Circle>())
         {
             auto transform_component{world.getComponent<Transform>(entity)};

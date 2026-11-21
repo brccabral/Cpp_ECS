@@ -2,3 +2,4 @@
 project(ECS_examples)
 
 add_subdirectory(intro)
+add_subdirectory(many_components)
