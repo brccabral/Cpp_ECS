@@ -10,24 +10,28 @@ namespace ECS
 {
     using Entity = std::uint32_t;
 
-    struct Transform
+    struct Component
+    {
+    };
+
+    struct Transform : public Component
     {
         Vector2 position{};
     };
 
-    struct Circle
+    struct Circle : public Component
     {
         float radius{};
         Color color{};
     };
 
-    struct Movement
+    struct Movement : public Component
     {
         Vector2 direction{};
     };
 
     template <typename T>
-    concept ComponentConcept = std::is_same_v<T, Transform> || std::is_same_v<T, Circle> || std::is_same_v<T, Movement>;
+    concept ComponentConcept = std::derived_from<T, Component>;
 
     class World
     {
@@ -43,24 +47,24 @@ namespace ECS
             return m_nextEntity++;
         }
 
-        template <ComponentConcept Component, typename... Args>
-        Component& addComponent(Entity entity, Args&&... args)
+        template <ComponentConcept ComponentType, typename... Args>
+        ComponentType& addComponent(Entity entity, Args&&... args)
         {
-            auto& storage{getStorage<Component>()};
+            auto& storage{getStorage<ComponentType>()};
             return storage.addComponent(entity, std::forward<Args>(args)...);
         }
 
-        template <ComponentConcept Component>
-        std::optional<std::reference_wrapper<Component>> getComponent(Entity entity)
+        template <ComponentConcept ComponentType>
+        std::optional<std::reference_wrapper<ComponentType>> getComponent(Entity entity)
         {
-            auto& storage{getStorage<Component>()};
+            auto& storage{getStorage<ComponentType>()};
             return storage.getComponent(entity);
         }
 
-        template <ComponentConcept Component>
+        template <ComponentConcept ComponentType>
         auto& getComponentMap()
         {
-            return getStorage<Component>().getMap();
+            return getStorage<ComponentType>().getMap();
         }
 
     private:
@@ -70,18 +74,18 @@ namespace ECS
 
         Entity m_nextEntity{1};
 
-        template <ComponentConcept Component>
+        template <ComponentConcept ComponentType>
         class Storage
         {
         public:
             template <typename... Args>
-            Component& addComponent(Entity entity, Args&&... args)
+            ComponentType& addComponent(Entity entity, Args&&... args)
             {
-                auto [it, inserted]{m_storage.emplace(entity, Component{std::forward<Args>(args)...})};
+                auto [it, inserted]{m_storage.emplace(entity, ComponentType{{}, std::forward<Args>(args)...})};
                 return it->second;
             }
 
-            std::optional<std::reference_wrapper<Component>> getComponent(Entity entity)
+            std::optional<std::reference_wrapper<ComponentType>> getComponent(Entity entity)
             {
                 auto it{m_storage.find(entity)};
                 if (it == m_storage.end())
@@ -97,13 +101,13 @@ namespace ECS
             }
 
         private:
-            std::unordered_map<Entity, Component> m_storage{};
+            std::unordered_map<Entity, ComponentType> m_storage{};
         };
 
-        template <ComponentConcept Component>
-        Storage<Component>& getStorage()
+        template <ComponentConcept ComponentType>
+        Storage<ComponentType>& getStorage()
         {
-            static Storage<Component> storage{};
+            static Storage<ComponentType> storage{};
             return storage;
         }
     };
